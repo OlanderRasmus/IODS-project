@@ -3,11 +3,19 @@
 
 *Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you should use R Markdown syntax.*
 
+I am looking forward to taking part in this course. Being honest, I felt a bit intimidated at first, as  I've only recently started using R. I have never done any coding before, and only used SPSS as my statistics software. However, I believe mastering R and learning the basics in data science are crucial, if one wishes to pursue any sort of future in academia.
+
+I hope that this introduction to data science will help me laern R and get a grasp of what data science is. I hope to be able to incorporate the lessons I get here to my own PhD.
+
+My repository: <https://github.com/OlanderRasmus/IODS-project>
+
+
+
 ```{r}
 # This is a so-called "R chunk" where you can write R code.
 
 date()
 
 ```
-The text continues here.
+
 
