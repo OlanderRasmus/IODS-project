@@ -1,13 +1,80 @@
-# Insert chapter 2 title here
+# Regression and model validation
 
-*Describe the work you have done this week and summarize your learning.*
-
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
 
 ```{r}
 date()
 ```
 
-Here we go again...
+We will analyse a dataset consisting of answers to a survey on the attitude of student's towarsd learning.
+
+We begin by setting our working directory and reading in the data file and exploring the dimensions and structure of the dataset
+
+```{r}
+#We'll first set the working directory.
+setwd("~/Desktop/IODS2020/IODS-project")
+
+#And then check that it is correct.
+
+getwd()
+
+#We'll then read the file and examine it.
+learning2014 <- read.table(file = "learning2014.txt")
+
+dim(learning2014)
+str(learning2014)
+```
+
+As we can see, the data set consists of 166 observations of 7 variables. The column "gender" gives the respondents gender (M = male, F= Female) and the column "Age" their age in years. The column "attitude" describes the respondents attitude towards statistics and the column "points" their totalt points in an exam. The columns "deep", "stra" and "sur" give the mean points to questions about deep, strategic and surface learning, respectively.
+
+Let's check the summary of the table, to know how the data is distributed.
+
+```{r}
+summary(learning2014)
+```
+
+
+Next we will examine the data visually. We're interested in what variables that might affect points in the questionnaire, but we'll start by examining the whole data set.
+
+
+```{r}
+#We first accesses the library GGally and ggplot2.
+library(GGally)
+library(ggplot2)
+
+#And then draw a scatter plot matrix (p1).
+
+p1 <- ggpairs(learning2014, mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)))
+p1
+```
+
+Based on this, points seem to be correlated the strongest (positively) with attitude (correlation coefficient 0.437, followed by strategic learning (0.146) and negatively correlated with surface learning (-0.144).
+
+We'll create a linear model including all these three variables and check these.
+
+```{r}
+my_model <- lm(Points ~ Attitude + stra + surf, data = learning2014)
+
+summary(my_model)
+```
+The model predicts linearily that Points = 11,01711 + 0.33952 * Attitude + 0.8.5313 * Mean strategic score - 0.58607* Mean surface learning score.
+
+The model has a an R^2 of 0.2074 (i.e explains 20.74 % of Points) and is in itself significant (p<0.05), however neither the mean strategic score nor the mean surface score are signficant. Let's remove these.
+
+```{r}
+new_model <- lm(Points ~ Attitude, data = learning2014)
+
+summary(new_model)
+```
+
+Now the model has a R^2 of 0.1906 and is still signficant (p<0.05). The R^2 value means that it is able to explain 19.06 % of the variance in the points.
+
+Next we'll check the diagnostics, i.e. that the assumptions of linear regression have not been broken. This is easiest done visually. 
+```{r}
+plot(new_model, which = c(1, 2, 5))
+```
+
+The first plots shows the residuals vs the fitted values, i.e. how far away each data point is from our predicted model. THe data point should be equally far from our predicted model throughout the model (homoscedasticity). The residuals are equally distributed througout the predicted values.
+
+The second plot shows how residuals are distributed. The better they follow the Q-Q line, the more normal is their distributed. The residuals are sufficiently normal.
+
+The third plot shows the residuals vs leverage. The further to the right a point is, the more leverage it has, i.e. affects the model. This is useful to detect significant outliers. THe model does not suffer form significant outliers,
