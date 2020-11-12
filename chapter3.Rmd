@@ -1,0 +1,118 @@
+# Logistic regression
+
+```{r}
+date()
+library(dplyr)
+library(ggplot2)
+```
+
+2. Let's read in the data and print out the names of the variables.
+
+```{r}
+alc <- read.csv(file= "data/alc.csv", header = T)
+colnames(alc)
+```
+The dataset describes student achievement in secondary education of two Portuguese schools and includes, among other things, performance, abscences and alcohol use. The dataset is derived from the performance in two separate classes, Portuguese and mathematics.
+
+3. Analysing the effect  of alcohol use.
+
+I will be looking into the effect of alcohol use on time spent studying ('studytime'), number of failures ('failures'), absences  ('absences') and final grade ('G3'. The hypothesis is that higher alcohol use is negatively associated with studytime and final grade, while positively associated with the number of failures and absences.
+
+4. Exploring the distributions
+
+It is good to first examine the data graphically. Alcohol use is a numeric variable ranging from 1-5, time spent studying an ordinal variable on a range from 1-4, the number of failures ordinal on a range 1-4, absences numeric (n of abscenes) and final grade is numeric as well ranging from 0-20.
+
+
+
+```{r}
+p1 <- ggplot(alc, aes (x=alc_use, y = studytime)) + geom_bar(stat="identity")
+p1
+p2 <- ggplot(alc, aes (x=alc_use, y = failures)) + geom_bar(stat="identity")
+p2
+p3 <- ggplot(alc, aes (x=alc_use, y = absences, group = alc_use)) + geom_boxplot()
+p3
+p4 <- ggplot(alc, aes (x=alc_use, y = G3, group = alc_use )) +  geom_boxplot()
+p4
+```
+
+Studytime is difficult to spot as a trend from the graph, same for failures. However, the number of absences seems to increase with increased alcohol consumption, while the final grade decreases.
+
+Let's look at the means per category of alcohol use.
+
+```{r}
+alc %>%
+  group_by(alc_use) %>%
+  summarise(st = mean(studytime), fail = mean(failures),  ab = mean(absences), grade = mean(G3))
+```
+In addition to the earlier noted trends in abscences and grades, failures seems to incerease with increased alcohol consumption, while studytime decreases.
+
+
+5. Logistic regression
+
+Next, lets explore the relationship between high alcohol use and studytime, failures absences and grade, and create odds ratios with 95% CI's.
+
+```{r}
+m1 <- glm(high_use ~ studytime + failures + absences + G3, data = alc, family = "binomial")
+
+summary(m1)
+
+coef(m1)
+
+OR1 <- coef(m1) %>% exp
+
+CI1 <- confint(m1) %>% exp
+
+cbind(OR1, CI1)
+```
+
+By looking at the summary of the model, we can see that failures and G3 are not significant predictors. This becomes even more clear when examining the ORs and their CIs. The ORs and their 95 CIs are as follows: studytime 0.62 (0.45-0.84), failures 0.62 (0.45-0.84), absences 1.08 (1.04-1.13) and G3 0.97 (0.89-1.04).
+
+Both failures and G3 include one within their 95 % CI and are not significant predictors, while studytime and absences are.
+
+Thus are hypothesis that increased alcohol consumption is related to an increase in failures and decrease in G3 is not necesseraily true, while there seems to be an association between increased alcohol use and decreased time spent studying and increased absences.
+
+6. Let's create a new model and see its predictive value. First, let's check the ORs and their 95 CI's.
+```{r}
+m2 <- glm(high_use ~ studytime + absences, data = alc, family = "binomial")
+
+summary(m2)
+
+coef(m2)
+
+OR2 <- coef(m2) %>% exp
+
+CI2 <- confint(m2) %>% exp
+
+cbind(OR2, CI2)
+```
+
+The model looks good, with both studytime and absences as signficant predictors.
+Now, let's move to predicting. Let's first examine the prediction using crosstabs and plotting the values. 
+
+```{r}
+probabilities <- predict(m2, type = "response")
+alc <- mutate(alc, probability= probabilities)
+alc <- mutate(alc, prediction = probability >0.5)
+
+table(high_use = alc$high_use, prediction = alc$prediction)
+
+g <- ggplot(alc, aes(x = probability, y = high_use, col = prediction))
+g + geom_point()
+
+table(high_use = alc$high_use, prediction = alc$prediction) %>% prop.table %>% addmargins
+
+```
+The model predicts 256 correctly as false, 18 as correctly true, while predicting 96 cases as true when in reality false, and 12 as false when in reality true. This can be seen graphically as well.
+
+Let's further examine the model using the penalty/loss function.
+
+```{r}
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+loss_func(class = alc$high_use, prob = alc$probability)
+```
+
+Based on the loss function we can see that the model incorrectly predicts 0.28 of the data . A simple guessing strategy would give a loss of 0.50, indicating that our model is better than pure guess. Still, 0.28 is quite a large error.
