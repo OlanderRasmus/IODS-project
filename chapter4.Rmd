@@ -1,0 +1,156 @@
+---
+title: 'Clustering and classification'
+output: html_document
+---
+
+```{r}
+date()
+library(dplyr)
+library(ggplot2)
+library(MASS)
+```
+
+Task 2
+
+```{r}
+data("Boston")
+str(Boston)
+dim(Boston)
+```
+The Boston dataset consists of 506 rows, 14 columns, and describes housing values in suburbs of Boston, published by Harrison D. et Rubinfield, D.L. in 1978, and Belsely et al. 1980. The data contains a set of variables per town, including per capita crime rate, zoning data, industry, demographics and housing.
+
+Task 3
+
+I chose to examine tha dataset using a correlation plot, and to examine the summary of the data.
+
+```{r}
+library(corrplot)
+
+summary(Boston)
+cor_matrix <- cor(Boston) %>% round (2)
+cor_matrix
+
+corrplot(cor_matrix, method="circle", type = "upper", cl.pos = "b", tl.pos = "d", tl.cex = 0.6)
+
+```
+From the correlation plot and matrix we can see that, for instance, index of accessibility to radial highways (rad) is highly correlated with the full-value property-tax rate per/$10,000 (0.91). And the weighted mean of distances to five Boston employment centres (dis) is highly negatively correlated with the proportion of owner-occupied units built prior to 1940 (age) (-0.75), nitrogen oxides concentration (parts per 10 million) (nox) and the proportion of non-retail business acres per town (indus), correlation coefficients of -0.75,-0.77 and -0.71, respectively. From the summary view we can see that the distribution of variables varies greatly for each variable. However, the dummy variable chas (whether the Charles River is next to the town), is oddly described in this summary.
+
+
+Task 4 
+
+Part 1, scaling the dataset and saving it as a data.frame.
+```{r}
+boston_scaled <- scale(Boston)
+
+summary(boston_scaled)
+
+class(boston_scaled)
+
+boston_scaled <- as.data.frame(boston_scaled)
+```
+From the summary, we can see that is now scaled in line to its own mean.
+
+Next, we're crating the a categorical variable of the crime rate, and drop the old crime rate variable from the dataset. I personally find this part somewhat confusing, which is why I kept the comments and code from datacamp intact.
+
+```{r}
+# summary of the scaled crime rate
+summary(boston_scaled$crim)
+
+# create a quantile vector of crim and print it
+bins <- quantile(boston_scaled$crim)
+bins
+
+# create a categorical variable 'crime'
+crime <- cut(boston_scaled$crim, breaks = bins , include.lowest = TRUE, label = c("low", "med_low", "med_high", "high"))
+
+# look at the table of the new factor crime
+table(crime)
+
+# remove original crim from the dataset
+boston_scaled <- dplyr::select(boston_scaled, -crim)
+
+# add the new categorical value to scaled data
+boston_scaled <- data.frame(boston_scaled, crime)
+
+```
+
+Finally, we're dividing the dataset in training and testing sets, with 80% of the data in the train set.
+
+```{r}
+n <- nrow(boston_scaled)
+ind <- sample(n,  size = n * 0.8)
+train <- boston_scaled[ind,]
+test <- boston_scaled[-ind,]
+```
+
+Task 5
+
+```{r}
+lda.fit <- lda(crime ~ ., data = train)
+lda.fit
+
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "orange", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+classes <- as.numeric(train$crime)
+
+plot(lda.fit, dimen = 2, col = classes, pch = classes)
+lda.arrows(lda.fit, myscale = 1)
+
+```
+
+Task 6
+
+```{r}
+correct_classes <- test$crime
+test <- dplyr::select(test, -crime)
+
+lda.pred <- predict(lda.fit, newdata = test)
+table(correct = correct_classes, predicted = lda.pred$class)
+```
+Looking at the results, our model correctly predicted 13 as low, 13 as medium low, 18 as medium high and 28 high, giving in total 72 correct predictions. However, the model also predicted 30 wrong, predicting especially low cases and medium high cases as medium low.
+
+Task 7
+
+Part 1: calculating the distances.
+```{r}
+data("Boston")
+boston_scaled2 <- scale(Boston)
+boston_scaled2 <- as.data.frame(boston_scaled2)
+# euclidean distance matrix
+dist_eu <- dist(boston_scaled2)
+summary(dist_eu)
+```
+
+Part 2: K-means algorithm, visualising it (not needed), and investigating the optimal number. Note that the seed is set to 123, as K-means might prouce different results every time.
+```{r}
+set.seed(123)
+km <-kmeans(boston_scaled2, centers = 4)
+pairs(boston_scaled2, col = km$cluster)
+
+k_max <- 10
+twcss <- sapply(1:k_max, function(k){kmeans(boston_scaled2, k)$tot.withinss})
+qplot(x = 1:k_max, y = twcss, geom = 'line')
+```
+
+The optimal number of clusters is when the total WCSS changes radically. In this case, it seems to be 2, as after that, the slope flattens for each category.
+
+Rerunning the clustering, with 2 clusters.
+
+```{r}
+km <-kmeans(boston_scaled2, centers = 2)
+pairs(boston_scaled2, col = km$cluster)
+```
+
+
+Examining the plots, the clustering seems to be doing all right for each variable. However, in order to looking for closer trends I would like to have the knowledge of what groups we are typically looking for in this sort of data and compare the two predicted clusters to some sort of hypothesis.
+
+
+
+
