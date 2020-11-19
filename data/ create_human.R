@@ -1,4 +1,4 @@
-#Rasmus Olander 5.11.2020. Script for datawrangling for the data for week 48.
+#Rasmus Olander 19.11.2020. Script for datawrangling for the data for week 48.
 
 library(dplyr)
 
