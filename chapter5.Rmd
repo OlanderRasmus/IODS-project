@@ -1,0 +1,127 @@
+---
+title: 'Dimensionality reduction techniques'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(GGally)
+library(corrplot)
+human <- read.csv("data/human.csv", row.names = 1)
+```
+
+Task 1.
+
+Let's examine the data graphically.
+
+```{r}
+ggpairs(human)
+cor_matrix <- cor(human)
+corrplot(cor_matrix, method="circle", type="upper", cl.pos="b", tl.pos="d", tl.cex = 0.6)
+
+```
+
+Examining the scatterplots, there seems to be strong, linear associaton between expected education and life expectancy, and adolescent birth rate and maternal mortality. The association between life expectancy and GNI seems almost exponential. The strongest correlation overall is the one between maternal mortality and life expectancy, which is rather expected.
+
+Let's look at the summary of the data:
+
+```{r}
+summary(human)
+```
+
+As we can see from the graphical distribution, and from the summaries, quite a lot of the data is rather skewed. Especially GNI, maternal mortality and adolescent birth rates have a rather large rightward tail, while life expectancy, education expectancy and female-male ration in the labour force all have leftward tails. This is confirmed from the summary view, as the mean and median of all mentioned variables are quite far apart (especially so for GNI, maternal mortality and adolescent birth rate).
+
+#Task 2.
+
+```{r, fig.cap= "Figure 1. Biplot of the principal component analysis on data from the UN human development program, unstandardised."}
+pca_human <- prcomp(human)
+biplot(pca_human, choices = 1:2, cex = c(0.5, 0.5))
+````
+```{r}
+s <- summary(pca_human)
+s
+pca_pr <- pca_pr <- round(100*s$importance[2,], digits = 1)
+pca_pr
+```
+
+If we examine the biplot, we can see, that gross national income per capita (GNI) completely dominates everything else. In fact, it is parallel to the PC1 axis, showing that they are highly parallel. Examining the proportion of variance, we can see that PC1 stands for 99.999 % of the variance, while PC2 stands for 0.001 %, while the rest don't really add at all. This rounds down to 100 % for PC1.
+
+#Task 3.
+
+Let's do the same as above, but now standardising the data.
+
+```{r}
+human_std <- scale(human)
+summary(human_std)
+
+pca_human_std <- prcomp(human_std)
+```
+
+```{r, fig.cap= "Figure 2. Biplot of the principal component analysis on the same data as above, but standardised.  "}
+biplot(pca_human_std, choices = 1:2, cex = c(0.5, 0.5))
+```
+
+```{r}
+s_std <- summary(pca_human_std)
+s_std
+pca_pr_std <- round(100*s_std$importance[2,], digits = 1)
+pca_pr_std
+```
+The results differ markedly from those above. This is caused by the standardisation of the data, which removed the dominating effect of GNI, allowing us to see the effect of the other variables as well. Looking PC1 and PC2, they now explaining 53.6% and 16.2 %, respectively.  Now, for instance, we can see that GNI, education and life expectancy, all "pull in the same direction", and all are highly negatively correlated with maternal mortality and adolescent birth rate. This is to be expected, as we might reasonably assume, that people in countries with a higher gross national income per capita (GNI) have a higher life expectany and are expected to more highly educated, while at the same time the opposite is true for countries with higher maternal mortality and adolescent birth rate. In fact, we can also see the logic behind a higher adolescent birth rate and maternal mortality being related  - as they can both be logically assocaited with a lower access for women to healtchare services. 
+
+#Task 4.
+
+My interpretation is that GNI is such a dominating factor, that it hides everything else within it. Alone, it would  explain nearly all of the variance, as seen in task 2, where it was parallel to PC1 which explained more than 99.9 % of the variance. However, when standardising, we can see that it is not really the greatest explainer of variance, with its arrow being shorter than any one of the other arrows. 
+
+#Task 5.
+
+```{r}
+library("FactoMineR")
+
+data(tea)
+str(tea)
+dim(tea)
+```
+The dataset tea consists of 300 observations of 36 variables, based on a questionnaire on how individuals drink tea (18 questions), product's perception (12 question) and personal details (4 questions). In addition, age has been divided into classes.  I was unable to find information on what the 36th variable would be, but I assume it is frequency of drinking tea.
+
+I'll examine the columns containing type of tea ("Tea"), whether drunk tea alone or with milk or lemon ("How), whether tea bags or unpackaged, or obth ("how"), use of sugar ("sugar"), where tea is bought from "where", and whether it is drunk at lunch or not ("lunch").
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(FactoMineR)
+keep_columns <- c("Tea", "How", "how", "sugar", "where", "lunch")
+tea_time <- dplyr::select(tea, one_of(keep_columns))
+
+summary(tea_time)
+str(tea_time)
+
+gather(tea_time) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+```
+The data is visualised and summarised above. We can see that that the data is split into three groups for "how", "Tea" and "where", in two groups for "lunch" and "sugar" and four groups for "How". The distribution is seen above.
+
+
+Next, we'll do an MCA on the data.
+
+```{r}
+# multiple correspondence analysis and visualize
+mca <- MCA(tea_time, graph = T)
+
+# summary of the model
+summary(mca)
+
+```
+We'll start by examining the summary of the MCA. Notably, from the Eigenvalues table we can see that dimensions 1 and 2 explain around 29 % of the variance, with dimension 1 explaining 15 % and dimension 2 14%. Looking at the table of the categorical variables, we can see that "how" and "where" are correlated with dimensions 1 and 2, being surpassed by "Tea" and "How" for dimension 3.
+
+The variables representation plot shows the same information graphically, and we can in fact see that "how" and "where" are correlated quite the same for dimensions and 2. Thus we can presume, that whether tea is bought in a tea shop or supermarket and whether it is made from tea bags or unpackaged tea seems to tell our gropus apart.
+
+Finally, examining the MCA factor map for the variables, we can see that the same people who buy their tea unpackaded are likely to buy it from a tea shop, and the tea is quite often green tea. Similarly, tea bags and chain stores seems to similar, and the people who buy both tea bags and unpackaged tea do it both from tea shops and chain store. Quite intuitive! We'll leave the MCA factor map for the indivuals as it is - it doesn't really tell us that much about the whole.
+
+
+

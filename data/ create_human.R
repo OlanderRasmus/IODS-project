@@ -4,9 +4,11 @@ library(dplyr)
 
 #Task 2.
 
-hd <- read.csv("http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/human_development.csv", stringsAsFactors = F)
+hd <- read.csv("http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/human_development.csv", 
+               stringsAsFactors = F)
 
-gii <- read.csv("http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/gender_inequality.csv", stringsAsFactors = F, na.strings = "..")
+gii <- read.csv("http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/gender_inequality.csv", 
+              stringsAsFactors = F, na.strings = "..")
 
 #Task 3.
 str(hd)
@@ -64,3 +66,64 @@ dim(human)
 
 setwd("~/Desktop/IODS2020/IODS-project")
 write.csv(human, file="data/human.csv", row.names = FALSE)
+
+
+#Data wrangling continues, exercise 5.
+
+#Task 1.
+
+library(stringr)
+
+human$gnipc <- str_replace(human$gnipc, pattern=",", replace ="") %>% as.numeric()
+
+#Task 2.
+
+#I'll start by renaming my columns according to the metafile.
+human <- human %>% 
+  rename(
+    Country = country,
+    Edu2.FM = edu2r, 
+    Labo.FM = labfm,
+    Edu.Exp = eduexp,
+    Life.Exp = lifeexp,
+    GNI = gnipc,
+    Mat.Mor = matmor,
+    Ado.Birth = adolbirth,
+    Parli.F = reprparl
+  )
+
+#And then keep said columns
+keep_columns <- c("Country", "Edu2.FM", "Labo.FM", "Edu.Exp", "Life.Exp",
+                  "GNI","Mat.Mor", "Ado.Birth", "Parli.F")
+
+human <- select(human, one_of(keep_columns))
+
+#Task 3.
+#Removing all rows with missing values.
+
+human <- human[complete.cases(human),]
+
+#Task 4.
+#Removing observations which relate to regions instead of countries.
+#By looking at thed ata, we know that the alst 7 entries are regions.
+
+last <- nrow(human) - 7
+human <- human[1:last,]
+
+#Task 5. 
+#Country names as row names, remove the country variable and saving.
+
+rownames(human) <- human$Country
+keep_columns2 <- c("Edu2.FM", "Labo.FM", "Edu.Exp", "Life.Exp",
+                  "GNI","Mat.Mor", "Ado.Birth", "Parli.F")
+human <- select(human, one_of(keep_columns2))
+
+dim(human)
+#155 observations and 8 variables. Checks out.
+
+setwd("~/Desktop/IODS2020/IODS-project")
+write.csv(human, file="data/human.csv", row.names = TRUE)
+
+#Checking.
+human <- read.csv("data/human.csv", row.names = 1)
+"Everything works!"
